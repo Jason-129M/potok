@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ПОТОК — AI-платформа закупок HoReCa</title>
+  <style>
+    :root {
+      --bg-primary: #030712;
+      --bg-surface: #0B1120;
+      --bg-card: #0F172A;
+      --border: #1E293B;
+      --accent: #00F2FE;
+      --accent-2: #3B82F6;
+      --accent-glow: rgba(0, 242, 254, 0.25);
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --font-main: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.6;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Background Grid & Gradient */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 35%, rgba(0, 242, 254, 0.06) 0%, transparent 45%),
+        linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* Layout */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .section { display: none; padding: 80px 0; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+    .section.active { display: block; opacity: 1; transform: translateY(0); }
+
+    /* Header */
+    header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border); height: 72px;
+      display: flex; align-items: center;
+    }
+    .nav-wrapper { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .logo { font-size: 1.4rem; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .logo svg { width: 28px; height: 28px; fill: var(--accent); }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: var(--transition); }
+    .nav-link:hover, .nav-link.active { color: var(--accent); }
+    .nav-cta { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); font-weight: 600; font-size: 0.85rem; }
+    .nav-cta:hover { border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+    /* Typography & Utils */
+    h1, h2, h3 { font-weight: 700; letter-spacing: -0.5px; line-height: 1.2; }
+    h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin-bottom: 1rem; }
+    h2 { font-size: 2rem; margin-bottom: 0.5rem; }
+    p { color: var(--text-muted); margin-bottom: 1rem; }
+    .text-center { text-align: center; }
+    .mt-2 { margin-top: 2rem; }
+    .mb-2 { margin-bottom: 2rem; }
+    .badge { display: inline-block; padding: 4px 10px; background: rgba(0, 242, 254, 0.1); color: var(--accent); border-radius: 99px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Buttons & Inputs */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 24px; border-radius: var(--radius-md); font-weight: 600;
+      cursor: pointer; transition: var(--transition); border: none; font-family: inherit; font-size: 0.95rem;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-2), var(--accent));
+      color: #030712; box-shadow: 0 4px 20px rgba(0, 242, 254, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0, 242, 254, 0.4); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: rgba(0, 242, 254, 0.05); }
+    .input, .select {
+      width: 100%; padding: 12px 16px; background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-md); color: var(--text-main); font-size: 0.95rem; outline: none; transition: var(--transition);
+    }
+    .input:focus, .select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+
+    /* Cards & Grid */
+    .grid { display: grid; gap: 20px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 24px; transition: var(--transition); position: relative; overflow: hidden;
+    }
+    .card:hover { transform: translateY(-4px); border-color: rgba(0, 242, 254, 0.3); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+    .card-glow { border-color: var(--accent); box-shadow: 0 0 25px var(--accent-glow), inset 0 0 15px rgba(0, 242, 254, 0.1); }
+
+    /* Onboarding */
+    .onboarding-hero { min-height: 90vh; display: flex; align-items: center; justify-content: center; text-align: center; }
+    .role-cards { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; margin-top: 32px; }
+    .role-card {
+      flex: 1; min-width: 260px; max-width: 340px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 32px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .role-card:hover { border-color: var(--accent); transform: scale(1.03); background: linear-gradient(180deg, rgba(0, 242, 254, 0.05), transparent); }
+    .role-icon { width: 64px; height: 64px; background: rgba(0, 242, 254, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 8px; }
+    .role-title { font-size: 1.3rem; font-weight: 700; color: var(--text-main); }
+    .role-desc { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0; }
+
+    /* Flow & Forms */
+    .flow-container { max-width: 500px; margin: 60px auto; }
+    .check-result { text-align: center; padding: 24px; background: var(--bg-surface); border-radius: var(--radius-md); margin-top: 16px; display: none; }
+    .loader {
+      width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ai-results { margin-top: 32px; }
+    .result-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .match-score { color: var(--accent); font-weight: 700; background: rgba(0, 242, 254, 0.1); padding: 4px 12px; border-radius: 99px; }
+
+    /* Dashboard */
+    .dash-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 8px; overflow-x: auto; }
+    .tab { padding: 8px 16px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-weight: 500; border-radius: 6px; transition: var(--transition); white-space: nowrap; }
+    .tab.active { background: var(--accent-2); color: #030712; }
+    .dash-panel { display: none; }
+    .dash-panel.active { display: block; animation: fadeIn 0.4s ease; }
+    .metric-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .metric-card { flex: 1; min-width: 180px; background: var(--bg-surface); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border); }
+    .metric-val { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+    .metric-label { font-size: 0.85rem; color: var(--text-muted); }
+    .progress-track { width: 100%; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); width: 0%; transition: width 1s ease; }
+
+    /* Pricing */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: center; margin-top: 32px; }
+    .price-card { background: var(--bg-card); border: 1px solid var(--border); padding: 32px; border-radius: var(--radius-xl); transition: var(--transition); position: relative; }
+    .price-card.lux { transform: scale(1.05); border-color: var(--accent); box-shadow: 0 0 40px var(--accent-glow); z-index: 2; }
+    .price-tag { font-size: 2.2rem; font-weight: 800; margin: 16px 0; }
+    .price-tag span { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
+    .feature-list { list-style: none; margin: 20px 0; }
+    .feature-list li { padding: 8px 0; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-muted); }
+    .feature-list li::before { content: "✓"; color: var(--accent); font-weight: bold; }
+    .popular-badge { position: absolute; top: -12px; right: 24px; background: var(--accent); color: #030712; padding: 4px 12px; border-radius: 99px; font-size: 0.75rem; font-weight: 800; }
+
+    /* Trends */
+    .trend-item { margin-bottom: 16px; }
+    .trend-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .trend-val { font-weight: 700; color: var(--success); }
+    .rec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+    .rec-card { background: var(--bg-surface); border: 1px dashed var(--border); padding: 16px; border-radius: var(--radius-md); font-size: 0.9rem; }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-slideUp { animation: slideUp 0.6s ease forwards; opacity: 0; }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .price-card.lux { transform: none; }
+      .nav-links { display: none; }
+    }
+
+    /* Toast */
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { padding: 12px 20px; background: var(--bg-card); border-left: 4px solid var(--accent); border-radius: var(--radius-md); color: var(--text-main); box-shadow: 0 8px 24px rgba(0,0,0,0.6); animation: slideUp 0.3s ease; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container nav-wrapper">
+    <div class="logo" onclick="app.goHome()">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-1.08 3.97-2.9 5.4z"/></svg>
+      ПОТОК
+    </div>
+    <nav class="nav-links" id="mainNav" style="display:none;">
+      <span class="nav-link" onclick="app.switchSection('dashboard')">Кабинет</span>
+      <span class="nav-link" onclick="app.switchSection('pricing')">Тарифы</span>
+      <span class="nav-link" onclick="app.switchSection('trends')">Тренды</span>
+    </nav>
+    <button class="nav-cta" id="headerCta" onclick="app.goHome()">Войти</button>
+  </div>
+</header>
+
+<main>
+  <!-- ONBOARDING -->
+  <section id="onboarding" class="section active">
+    <div class="container onboarding-hero">
+      <div class="animate-slideUp stagger-1" style="animation-delay: 0.1s;">
+        <span class="badge">AI-платформа закупок HoReCa</span>
+        <h1 style="margin-top: 16px;">Кто вы?</h1>
+        <p>Выберите роль для начала работы в экосистеме</p>
+        <div class="role-cards">
+          <div class="role-card" onclick="app.selectRole('supplier')">
+            <div class="role-icon">🏭</div>
+            <div class="role-title">Я поставщик</div>
+            <div class="role-desc">Продажи, тендеры, аналитика спроса и рост заказов</div>
+          </div>
+          <div class="role-card" onclick="app.selectRole('customer')">
+            <div class="role-icon">🍽️</div>
+            <div class="role-title">Я заказчик</div>
+            <div class="role-desc">AI-подбор поставщиков, экономия до 25%, автоматизация</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUPPLIER CHECK -->
+  <section id="supplier-check" class="section">
+    <div class="container">
+      <div class="flow-container animate-slideUp">
+        <h2 class="text-center">Проверка компании</h2>
+        <p class="text-center">Введите название или ИНН для поиска в базе</p>
+        <input type="text" id="companyInput" class="input mt-2" placeholder="ООО «Поставщик» или ИНН">
+        <button class="btn btn-primary mt-2" style="width:100%" onclick="app.checkCompany()">Проверить</button>
+        <div id="checkResult" class="check-result">
+          <div id="checkContent"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CUSTOMER FLOW -->
+  <section id="customer-flow" class="section">
+    <div class="container">
+      <div class="flow-container animate-slideUp">
+        <h2 class="text-center">Поиск поставщиков</h2>
+        <p class="text-center">AI подберет оптимальные варианты под ваш бизнес</p>
+        <div class="mt-2">
+          <select id="bizType" class="select mb-2">
+            <option value="" disabled selected>Тип бизнеса</option>
+            <option value="restaurant">Ресторан</option>
+            <option value="cafe">Кафе</option>
+            <option value="bar">Бар / Паб</option>
+            <option value="delivery">Доставка</option>
+          </select>
+          <select id="category" class="select mb-2">
+            <option value="" disabled selected>Категория</option>
+            <option value="food">Продукты питания</option>
+            <option value="alco">Напитки / Алкоголь</option>
+            <option value="packaging">Упаковка</option>
+            <option value="equipment">Оборудование</option>
+          </select>
+          <input type="text" id="cityInput" class="input mb-2" placeholder="Город">
+          <button class="btn btn-primary" style="width:100%" onclick="app.runAiSearch()">Запустить AI-подбор</button>
+        </div>
+        <div id="aiLoader" style="display:none; text-align:center; padding: 40px 0;">
+          <div class="loader"></div>
+          <p style="color:var(--accent);">AI анализирует рынок и подбирает поставщиков...</p>
+        </div>
+        <div id="aiResults" class="ai-results"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUPPLIER DASHBOARD -->
+  <section id="dashboard" class="section">
+    <div class="container">
+      <div class="grid grid-2" style="align-items: start;">
+        <div class="animate-slideUp">
+          <h2>Личный кабинет</h2>
+          <p>Управляйте заявками, участвуйте в тендерах</p>
+          <div class="dash-tabs">
+            <button class="tab active" onclick="app.switchTab('dash-profile', this)">Профиль</button>
+            <button class="tab" onclick="app.switchTab('dash-tenders', this)">Тендеры</button>
+            <button class="tab" onclick="app.switchTab('dash-analytics', this)">Аналитика</button>
+          </div>
+          
+          <div id="dash-profile" class="dash-panel active card">
+            <h3 style="margin-bottom:16px">Профиль компании</h3>
+            <p id="dashCompanyName">Название компании: <strong style="color:var(--text-main)">—</strong></p>
+            <p>Статус: <span class="badge">Верифицирован</span></p>
+            <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+              <p>Быстрые действия:</p>
+              <button class="btn btn-outline btn-sm" style="margin-right:8px" onclick="app.showToast('Редактирование профиля')">Настройки</button>
+              <button class="btn btn-outline btn-sm" onclick="app.showToast('Загрузка прайс-листа')">Загрузить прайс</button>
+            </div>
+          </div>
+
+          <div id="dash-tenders" class="dash-panel">
+            <div class="card" style="margin-bottom:12px; border-left:3px solid var(--accent);">
+              <h4 style="margin-bottom:4px">Поставка мяса (Москва)</h4>
+              <p style="font-size:0.85rem; margin:0">Дедлайн: 2 дня • Бюджет: от 500 т.р.</p>
+              <button class="btn btn-primary mt-2" style="padding:6px 12px; font-size:0.8rem" onclick="app.showToast('Заявка отправлена')">Откликнуться</button>
+            </div>
+            <div class="card" style="margin-bottom:12px; border-left:3px solid var(--warning);">
+              <h4 style="margin-bottom:4px">Упаковка для delivery (Саратов)</h4>
+              <p style="font-size:0.85rem; margin:0">Дедлайн: 5 дней • Бюджет: 150 т.р.</p>
+              <button class="btn btn-outline mt-2" style="padding:6px 12px; font-size:0.8rem" onclick="app.showToast('Заявка отправлена')">Откликнуться</button>
+            </div>
+          </div>
+
+          <div id="dash-analytics" class="dash-panel">
+            <div class="metric-row">
+              <div class="metric-card">
+                <div class="metric-label">Конкурентоспособность</div>
+                <div class="metric-val">82%</div>
+                <div class="progress-track"><div class="progress-fill" style="width: 82%;"></div></div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Средний чек</div>
+                <div class="metric-val">145 т.р</div>
+                <div style="color:var(--success); font-size:0.8rem;">↑ 12% к прошлому месяцу</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Активные заявки</div>
+                <div class="metric-val">14</div>
+              </div>
+            </div>
+            <h4 style="margin-bottom:12px">Сравнение с рынком</h4>
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-bottom:8px;">
+              <span style="color:var(--text-muted)">Ваша цена</span>
+              <span style="color:var(--accent)">-8.4%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width: 75%; background: var(--accent);"></div></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.9rem; margin:12px 0 8px;">
+              <span style="color:var(--text-muted)">Средняя по рынку</span>
+              <span>100%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width: 88%; background: var(--text-muted);"></div></div>
+          </div>
+        </div>
+        <div class="card animate-slideUp" style="animation-delay: 0.15s;">
+          <h3 style="margin-bottom:16px">📊 AI-рекомендации</h3>
+          <div style="background:var(--bg-surface); padding:12px; border-radius:8px; margin-bottom:10px; font-size:0.9rem;">
+            <p style="margin:0">💡 Увеличьте ассортимент в категории «Упаковка». Спрос вырос на 22% в вашем регионе.</p>
+          </div>
+          <div style="background:var(--bg-surface); padding:12px; border-radius:8px; margin-bottom:10px; font-size:0.9rem;">
+            <p style="margin:0">📈 Ваш рейтинг доверия: 4.8/5. Добавьте сертификаты для получения статуса «Premium».</p>
+          </div>
+          <div style="background:var(--bg-surface); padding:12px; border-radius:8px; margin-bottom:10px; font-size:0.9rem;">
+            <p style="margin:0">🔥 Новый тендер от сети из 12 заведений доступен для участия.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="section">
+    <div class="container">
+      <div class="text-center animate-slideUp">
+        <span class="badge">Монетизация</span>
+        <h2 class="mt-2">Выберите тариф</h2>
+        <p>Масштабируйте бизнес с правильным инструментом</p>
+      </div>
+      <div class="pricing-grid mt-2">
+        <div class="price-card animate-slideUp" style="animation-delay:0.1s">
+          <h3>Free</h3>
+          <div class="price-tag">0 ₽ <span>/ мес</span></div>
+          <ul class="feature-list">
+            <li>Листинг в каталоге</li>
+            <li>До 3 тендеров / мес</li>
+            <li>Базовая аналитика</li>
+            <li>Стандартная поддержка</li>
+          </ul>
+          <button class="btn btn-outline" style="width:100%" onclick="app.showToast('Тариф Free активирован')">Выбрать</button>
+        </div>
+        <div class="price-card lux animate-slideUp" style="animation-delay:0.2s">
+          <span class="popular-badge">Популярный</span>
+          <h3 style="color:var(--accent)">Lux</h3>
+          <div class="price-tag" style="color:var(--accent)">9 900 ₽ <span>/ мес</span></div>
+          <ul class="feature-list">
+            <li>🔝 Топ в выдаче & приоритет AI</li>
+            <li>✨ Подсветка карточки</li>
+            <li>📊 Расширенная аналитика цен</li>
+            <li>∞ Тендеры без лимитов</li>
+            <li>Персональный менеджер</li>
+          </ul>
+          <button class="btn btn-primary" style="width:100%" onclick="app.showToast('Запрос на Lux отправлен')">Подключить Lux</button>
+        </div>
+        <div class="price-card animate-slideUp" style="animation-delay:0.3s">
+          <h3>Pro</h3>
+          <div class="price-tag">3 500 ₽ <span>/ мес</span></div>
+          <ul class="feature-list">
+            <li>Расширенный каталог</li>
+            <li>15 тендеров / мес</li>
+            <li>Анализ конкурентов</li>
+            <li>Email-рассылки</li>
+          </ul>
+          <button class="btn btn-outline" style="width:100%" onclick="app.showToast('Тариф Pro активирован')">Выбрать</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRENDS -->
+  <section id="trends" class="section">
+    <div class="container">
+      <div class="animate-slideUp">
+        <h2 class="mb-2">Тренды рынка HoReCa</h2>
+        <div class="grid grid-3 mb-2">
+          <div class="card">
+            <div class="trend-header"><span>Цифровизация заказов</span><span class="trend-val">+24.8%</span></div>
+            <p style="font-size:0.85rem">Рост доли онлайн-заказов и предоплат</p>
+            <div class="progress-track"><div class="progress-fill" style="width: 82%;"></div></div>
+          </div>
+          <div class="card">
+            <div class="trend-header"><span>Локальные продукты</span><span class="trend-val">+18.2%</span></div>
+            <p style="font-size:0.85rem">Спрос на региональных поставщиков</p>
+            <div class="progress-track"><div class="progress-fill" style="width: 68%;"></div></div>
+          </div>
+          <div class="card">
+            <div class="trend-header"><span>Автоматизация закупок</span><span class="trend-val">+31.5%</span></div>
+            <p style="font-size:0.85rem">Внедрение AI и B2B-платформ</p>
+            <div class="progress-track"><div class="progress-fill" style="width: 91%;"></div></div>
+          </div>
+        </div>
+        <h3 class="mt-2 mb-2">Тренды для вас</h3>
+        <div class="rec-grid">
+          <div class="rec-card">📦 Рост спроса на крафтовую упаковку (+15% YoY)</div>
+          <div class="rec-card">🥩 Стабилизация цен на охлажденное мясо</div>
+          <div class="rec-card">☕ Бум спешелти-кофеен требует новых поставщиков зерна</div>
+          <div class="rec-card">🤖 42% ресторанов планируют перейти на AI-закупки к Q4</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer style="border-top: 1px solid var(--border); padding: 40px 0; margin-top: 80px; color: var(--text-muted); font-size: 0.85rem;">
+  <div class="container" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:20px;">
+    <div>© 2026 ПОТОК. AI-платформа для закупок HoReCa.</div>
+    <div>Контакты: support@potok.ai | Telegram</div>
+  </div>
+</footer>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  const app = {
+    currentRole: null,
+    company: null,
+
+    switchSection(id) {
+      document.querySelectorAll('.section').forEach(el => {
+        el.classList.remove('active');
+        el.style.opacity = 0;
+        el.style.transform = 'translateY(20px)';
+      });
+      const target = document.getElementById(id);
+      if (!target) return;
+      
+      setTimeout(() => {
+        target.classList.add('active');
+        // Trigger reflow
+        void target.offsetWidth;
+        target.style.opacity = 1;
+        target.style.transform = 'translateY(0)';
+        
+        // Animate progress bars if in dashboard/trends
+        if(id === 'dashboard' || id === 'trends') {
+          setTimeout(() => {
+            document.querySelectorAll('.progress-fill').forEach(el => {
+              const w = el.style.width;
+              el.style.width = '0%';
+              requestAnimationFrame(() => el.style.width = w);
+            });
+          }, 100);
+        }
+      }, 50);
+
+      if (id !== 'onboarding') {
+        document.getElementById('mainNav').style.display = 'flex';
+        document.getElementById('headerCta').textContent = this.currentRole === 'supplier' ? 'Кабинет' : 'Поиск';
+      } else {
+        document.getElementById('mainNav').style.display = 'none';
+        document.getElementById('headerCta').textContent = 'Войти';
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    goHome() {
+      this.switchSection('onboarding');
+    },
+
+    selectRole(role) {
+      this.currentRole = role;
+      if (role === 'supplier') {
+        this.switchSection('supplier-check');
+      } else {
+        this.switchSection('customer-flow');
+      }
+    },
+
+    checkCompany() {
+      const input = document.getElementById('companyInput').value.trim();
+      const resBox = document.getElementById('checkResult');
+      const content = document.getElementById('checkContent');
+      
+      if (!input) {
+        this.showToast('Введите название компании');
+        return;
+      }
+
+      // Mock DB
+      const known = ['СаратовПродукт', 'ПакМастер', 'ВолгаСтройСнаб'];
+      const found = known.some(c => input.toLowerCase().includes(c.toLowerCase()));
+
+      content.innerHTML = '';
+      resBox.style.display = 'block';
+
+      if (found) {
+        content.innerHTML = `<p style="color:var(--success); font-weight:600; margin-bottom:8px;">✅ Компания найдена в базе</p>
+                             <p style="color:var(--text-muted); margin-bottom:16px;">Войдите для доступа к тендерам и аналитике</p>
+                             <button class="btn btn-primary" onclick="app.loginSupplier('${input}')">Войти в кабинет</button>`;
+      } else {
+        content.innerHTML = `<p style="color:var(--accent); font-weight:600; margin-bottom:8px;">🆕 Компания не найдена</p>
+                             <p style="color:var(--text-muted); margin-bottom:16px;">Зарегистрируйтесь, чтобы начать получать заказы</p>
+                             <input type="email" class="input mb-2" placeholder="Email" style="margin-bottom:12px">
+                             <button class="btn btn-primary" onclick="app.loginSupplier('${input}')">Создать профиль</button>`;
+      }
+    },
+
+    loginSupplier(name) {
+      this.company = name;
+      document.getElementById('dashCompanyName').innerHTML = `Название компании: <strong style="color:var(--text-main)">${name}</strong>`;
+      this.switchSection('dashboard');
+      this.showToast(`Добро пожаловать, ${name}`);
+    },
+
+    runAiSearch() {
+      const biz = document.getElementById('bizType').value;
+      const cat = document.getElementById('category').value;
+      const city = document.getElementById('cityInput').value.trim();
+
+      if (!biz || !cat || !city) {
+        this.showToast('Заполните все поля');
+        return;
+      }
+
+      document.getElementById('aiResults').innerHTML = '';
+      const loader = document.getElementById('aiLoader');
+      loader.style.display = 'block';
+
+      // Mock AI Delay
+      setTimeout(() => {
+        loader.style.display = 'none';
+        const suppliers = [
+          { name: 'ООО «ГлобалФуд»', match: 94, tags: ['Продукты', 'Доставка 2ч'], rating: 4.9 },
+          { name: 'ИП Смирнов', match: 87, tags: ['Напитки', 'Ручной подбор'], rating: 4.6 },
+          { name: 'СаратовПродукт', match: 81, tags: ['Локальный', 'Опт'], rating: 4.8 }
+        ];
+        
+        let html = `<h3 style="margin-bottom:16px; color:var(--accent);">Результаты AI-подбора</h3>`;
+        suppliers.forEach(s => {
+          html += `
+          <div class="result-item">
+            <div>
+              <div style="font-weight:600; color:var(--text-main)">${s.name}</div>
+              <div style="font-size:0.85rem; color:var(--text-muted)">${s.tags.join(' • ')}</div>
+            </div>
+            <div style="text-align:right">
+              <span class="match-score">AI ${s.match}%</span>
+              <div style="font-size:0.8rem; margin-top:4px">⭐ ${s.rating}</div>
+            </div>
+            <button class="btn btn-outline btn-sm" style="margin-left:12px" onclick="app.showToast('Запрос отправлен поставщику')">Связаться</button>
+          </div>`;
+        });
+        document.getElementById('aiResults').innerHTML = html;
+        this.showToast('AI успешно подобрал 3 поставщика');
+      }, 1500);
+    },
+
+    switchTab(id, btn) {
+      document.querySelectorAll('.dash-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Re-trigger progress animation
+      setTimeout(() => {
+        document.querySelectorAll(`#${id} .progress-fill`).forEach(el => {
+          const w = el.style.width;
+          el.style.width = '0%';
+          requestAnimationFrame(() => el.style.width = w);
+        });
+      }, 100);
+    },
+
+    showToast(msg) {
+      const box = document.getElementById('toastContainer');
+      const t = document.createElement('div');
+      t.className = 'toast';
+      t.textContent = msg;
+      box.appendChild(t);
+      setTimeout(() => { if(t.parentNode) t.remove(); }, 3000);
+    }
+  };
+
+  // Init
+  window.addEventListener('DOMContentLoaded', () => {
+    app.goHome();
+  });
+</script>
+</body>
+</html>
